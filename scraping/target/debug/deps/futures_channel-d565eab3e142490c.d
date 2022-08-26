@@ -1,0 +1,11 @@
+/home/sam/Repos/citizensdivided/scraping/target/debug/deps/futures_channel-d565eab3e142490c.rmeta: /home/sam/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-channel-0.3.23/src/lib.rs /home/sam/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-channel-0.3.23/src/lock.rs /home/sam/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-channel-0.3.23/src/mpsc/mod.rs /home/sam/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-channel-0.3.23/src/mpsc/queue.rs /home/sam/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-channel-0.3.23/src/oneshot.rs
+
+/home/sam/Repos/citizensdivided/scraping/target/debug/deps/libfutures_channel-d565eab3e142490c.rlib: /home/sam/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-channel-0.3.23/src/lib.rs /home/sam/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-channel-0.3.23/src/lock.rs /home/sam/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-channel-0.3.23/src/mpsc/mod.rs /home/sam/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-channel-0.3.23/src/mpsc/queue.rs /home/sam/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-channel-0.3.23/src/oneshot.rs
+
+/home/sam/Repos/citizensdivided/scraping/target/debug/deps/futures_channel-d565eab3e142490c.d: /home/sam/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-channel-0.3.23/src/lib.rs /home/sam/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-channel-0.3.23/src/lock.rs /home/sam/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-channel-0.3.23/src/mpsc/mod.rs /home/sam/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-channel-0.3.23/src/mpsc/queue.rs /home/sam/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-channel-0.3.23/src/oneshot.rs
+
+/home/sam/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-channel-0.3.23/src/lib.rs:
+/home/sam/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-channel-0.3.23/src/lock.rs:
+/home/sam/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-channel-0.3.23/src/mpsc/mod.rs:
+/home/sam/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-channel-0.3.23/src/mpsc/queue.rs:
+/home/sam/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-channel-0.3.23/src/oneshot.rs:
