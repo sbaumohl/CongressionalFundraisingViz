@@ -1,12 +1,13 @@
 extern crate dotenv;
+use citizensdivided::entities::{members::Model};
 use dotenv::dotenv;
 use std::env;
 
 pub mod db_connection_handler {
-    use sqlx::{postgres::PgConnection, Connection};
+    use sea_orm::{Database, DatabaseConnection, DbErr};
 
-    pub async fn get_connection(url: &str) -> PgConnection {
-        let connection = PgConnection::connect(url).await;
+    pub async fn get_connection(url: &str) -> DatabaseConnection {
+        let connection: Result<DatabaseConnection, DbErr> = Database::connect(url).await;
         match connection {
             Err(e) => panic!("Connection Error: {}", e),
             Ok(f) => return f,
@@ -64,6 +65,4 @@ async fn main() {
         &propublica_key,
     )
     .await;
-
-    println!("{}", house_response);
 }

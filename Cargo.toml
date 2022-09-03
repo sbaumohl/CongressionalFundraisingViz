@@ -11,8 +11,9 @@ warp = "0.3.2"
 tokio = { version = "1.20.1", features = ["full"] }
 dotenv = "0.15.0"
 reqwest = "0.11.11"
-sqlx = { version = "0.6", features = [ "runtime-tokio-rustls", "macros", "postgres" ] }
 url = "2.2.2"
+sea-orm = { version = "^0.9.0", features = [ "sqlx-postgres", "runtime-tokio-native-tls", "macros" ] }
+sea-schema = "0.9.3"
 
 [[bin]]
 name = "scraping"

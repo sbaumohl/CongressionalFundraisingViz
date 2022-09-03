@@ -1,10 +1,9 @@
 extern crate dotenv;
+pub mod entities;
 use warp::{http::Response, Filter};
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 10)]
 async fn main() {
-    println!("Hello, world!");
-
     let warp_test = warp::any().map(|| {
         Response::builder()
             .header("my-custom-header", "some-value")
