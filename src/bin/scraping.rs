@@ -1,25 +1,24 @@
 extern crate dotenv;
-use citizensdivided::entities::{members::Model};
 use dotenv::dotenv;
+use sea_orm::{DatabaseConnection, DbErr, Database};
 use std::env;
 
-pub mod db_connection_handler {
-    use sea_orm::{Database, DatabaseConnection, DbErr};
-
-    pub async fn get_connection(url: &str) -> DatabaseConnection {
-        let connection: Result<DatabaseConnection, DbErr> = Database::connect(url).await;
-        match connection {
-            Err(e) => panic!("Connection Error: {}", e),
-            Ok(f) => return f,
-        }
-    }
-}
-
 mod propublica_request_handler {
+    use citizensdivided::entities::{members, prelude::Members};
+    use sea_orm::{ActiveModelTrait, EntityTrait, DatabaseConnection, DbErr};
+    use serde::Deserialize;
+    use serde_json::{Value, Error, json};
     use url::Url;
     const PROPUBLICA_URL: &str = "https://api.propublica.org/congress/v1/";
 
-    pub async fn get(client: reqwest::Client, endpoint: &str, api_key: &str) -> String {
+    #[derive(Deserialize)]
+    pub struct PropublicaReturn {
+        pub status: String,
+        pub copyright: String,
+        pub results: Vec<Value>
+    }
+
+    pub async fn get(client: reqwest::Client, endpoint: &str, api_key: &str) -> Result<PropublicaReturn, Error> {
         let url = match Url::parse(PROPUBLICA_URL) {
             Ok(url) => match url.join(endpoint) {
                 Ok(url) => url,
@@ -28,7 +27,7 @@ mod propublica_request_handler {
             Err(e) => panic!("{}", e),
         };
 
-        match client
+        let json = match client
             .get(url.as_str())
             .header("x-api-key", api_key)
             .send()
@@ -39,6 +38,22 @@ mod propublica_request_handler {
                 Err(e) => panic!("{}", e),
                 Ok(text) => text,
             },
+        };
+
+        Ok(serde_json::from_str(&json).unwrap())
+    }
+
+    pub async fn push_members_to_db(server_response: PropublicaReturn, db: &DatabaseConnection) -> Result<(), DbErr> {
+        let senate_members = server_response.results[0]["members"].as_array().expect("Error Deserializing JSON!").to_vec();
+
+        let members: Vec<members::ActiveModel> = senate_members.iter().map(|x| 
+            members::ActiveModel::from_json(json!(x)).expect("Conversion to Model Object Failed")
+        ).collect();
+    
+        match Members::insert_many(members).exec(db).await {
+            Err(e) => Err(e),
+            Ok(_) => Ok(())
+
         }
     }
 }
@@ -51,11 +66,11 @@ async fn main() {
     let fec_key = env::var("FEC_KEY").expect("PROPUBLICA_KEY must be set");
     let congress_no = env::var("CONGRESS").expect("CONGRESS must be set");
 
-    let connection = db_connection_handler::get_connection(&database_url).await;
+    let connection: DatabaseConnection = Database::connect(&database_url).await.expect("Error initializing DB connnection");
 
     let client = reqwest::Client::new();
 
-    let house_response = propublica_request_handler::get(
+    let senate_response = propublica_request_handler::get(
         client,
         &format!(
             "{congress}/{chamber}/members.json?in_office=True",
@@ -64,5 +79,16 @@ async fn main() {
         ),
         &propublica_key,
     )
-    .await;
+    .await.unwrap();
+
+    match propublica_request_handler::push_members_to_db(senate_response, &connection).await {
+        Err(e) => {
+            println!("Error Pushing Senate Members to DB: {}", e)
+        },
+        Ok(_) => {
+            println!("Succesfully Pushed Senate Members to DB")
+        }
+    };
+
+
 }
