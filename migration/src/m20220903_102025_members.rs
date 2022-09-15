@@ -2,11 +2,6 @@ use sea_orm::Statement;
 use sea_orm_migration::prelude::*;
 use sea_orm_migration::sea_orm::ConnectionTrait;
 
-extern crate dotenv;
-use dotenv::dotenv;
-use std::env;
-
-
 #[derive(DeriveMigrationName)]
 pub struct Migration;
 
@@ -16,8 +11,8 @@ impl MigrationTrait for Migration {
         let create_members_table_sql = "CREATE TABLE IF NOT EXISTS members (
             id VARCHAR(255) NOT NULL PRIMARY KEY,
             chamber VARCHAR(255),
-            title VARCHAR(255) NOT NULL,
-            short_title VARCHAR(255) NOT NULL,
+            title VARCHAR(255),
+            short_title VARCHAR(255),
             api_uri VARCHAR(255) NOT NULL,
             first_name VARCHAR(255) NOT NULL,
             middle_name VARCHAR(255),
@@ -34,8 +29,8 @@ impl MigrationTrait for Migration {
             cspan_id VARCHAR(255),
             votesmart_id VARCHAR(255),
             icpsr_id VARCHAR(255),
-            crp_id VARCHAR(255) NOT NULL,
-            google_entity_id VARCHAR(255) NOT NULL,
+            crp_id VARCHAR(255),
+            google_entity_id VARCHAR(255),
             fec_candidate_id VARCHAR(255) NOT NULL,
             url VARCHAR(255) NOT NULL,
             rss_url VARCHAR(255),
@@ -44,23 +39,23 @@ impl MigrationTrait for Migration {
             cook_pvi VARCHAR(255),
             dw_nominate NUMERIC(4, 3),
             ideal_point VARCHAR(255),
-            seniority VARCHAR(255) NOT NULL,
-            next_election VARCHAR(255) NOT NULL,
-            total_votes INTEGER NOT NULL,
-            missed_votes INTEGER NOT NULL,
-            total_present INTEGER NOT NULL,
+            seniority VARCHAR(255),
+            next_election VARCHAR(255),
+            total_votes INTEGER,
+            missed_votes INTEGER,
+            total_present INTEGER,
             last_updated VARCHAR(255) NOT NULL,
-            ocd_id VARCHAR(255) NOT NULL,
+            ocd_id VARCHAR(255),
             office VARCHAR(255),
             phone VARCHAR(255),
             fax VARCHAR(255),
             state VARCHAR(255) NOT NULL,
             district VARCHAR(255),
             at_large BOOLEAN,
-            geoid INTEGER,
-            missed_votes_pct NUMERIC(4, 2) NOT NULL,
-            votes_with_party_pct NUMERIC(5, 2) NOT NULL,
-            votes_against_party_pct NUMERIC(4, 2) NOT NULL
+            geoid VARCHAR(255),
+            missed_votes_pct NUMERIC,
+            votes_with_party_pct NUMERIC,
+            votes_against_party_pct NUMERIC
         );";
         let statement = Statement::from_string(
             manager.get_database_backend(),

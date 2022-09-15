@@ -1,1 +1,1 @@
-- https://diesel.rs/guides/getting-started
+- https://www.sea-ql.org/sea-orm-tutorial/ch01-01-project-setup.html

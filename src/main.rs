@@ -1,16 +1,42 @@
-extern crate dotenv;
 pub mod entities;
-use warp::{http::Response, Filter};
+mod schema;
 
-#[tokio::main(flavor = "multi_thread", worker_threads = 10)]
-async fn main() {
-    let warp_test = warp::any().map(|| {
-        Response::builder()
-            .header("my-custom-header", "some-value")
-            .body("and a custom body")
-    });
+extern crate dotenv;
+use std::env;
+use dotenv::dotenv;
 
-    warp::serve(warp_test).run(([127, 0, 0, 1], 8000)).await
+use async_graphql::{EmptyMutation, EmptySubscription, Schema};
+use async_graphql_rocket::*;
+use rocket::*;
+use schema::*;
+
+use async_graphql_rocket::GraphQLRequest;
+use sea_orm::{Database};
+
+type SchemaType = Schema<QueryRoot, EmptyMutation, EmptySubscription>;
+
+#[rocket::post("/graphql", data = "<request>", format = "application/json")]
+async fn graphql_request(schema: &State<SchemaType>, request: GraphQLRequest) -> GraphQLResponse {
+   request.execute(schema).await
 }
 
-// https://www.sea-ql.org/sea-orm-tutorial/ch01-01-project-setup.html
+#[get("/")]
+async fn index() -> &'static str {
+    "Hello, bakeries!"
+}
+
+#[launch]
+async fn rocket() -> _ {
+    dotenv().ok();
+    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+
+    let connection = Database::connect(&database_url).await.expect("Error initializing DB connnection");
+
+    let schema = Schema::build(QueryRoot, EmptyMutation, EmptySubscription).data(connection.clone()).finish();
+
+    rocket::build().manage(connection)
+    .manage(schema)
+
+    .mount("/", routes![index, graphql_request])
+
+}

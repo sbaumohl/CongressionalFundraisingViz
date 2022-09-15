@@ -1,13 +1,50 @@
 extern crate dotenv;
+use citizensdivided::entities::{members, prelude::Members};
 use dotenv::dotenv;
-use sea_orm::{DatabaseConnection, DbErr, Database};
+use sea_orm::{ActiveModelTrait, ActiveValue, Database, DatabaseConnection, EntityTrait};
+use serde_json::json;
 use std::env;
 
-mod propublica_request_handler {
-    use citizensdivided::entities::{members, prelude::Members};
-    use sea_orm::{ActiveModelTrait, EntityTrait, DatabaseConnection, DbErr};
+mod open_fec_handler {
     use serde::Deserialize;
-    use serde_json::{Value, Error, json};
+    use serde_json::{Error, Value};
+    use url::Url;
+
+    #[derive(Deserialize)]
+    struct OpenFecPagination {
+        per_page: i32,
+        pages: i32,
+        page: i32,
+        count: i32,
+    }
+
+    #[derive(Deserialize)]
+    struct OpenFecReturn {
+        pub api_version: String,
+        pub pagination: OpenFecPagination,
+        pub results: Vec<Value>,
+    }
+
+    impl OpenFecPagination {
+        pub fn next_page() {
+            todo!()
+        }
+    }
+
+    async fn get(client: &reqwest::Client, endpoint: &str, api_key: &str) -> Result<OpenFecReturn, Error>{
+        todo!();
+    }
+
+    pub async fn get_schedule_e_filings() {}
+
+    pub async fn get_schedule_e_totals_by_candidate() {}
+
+    pub async fn get_candidate_campaign_committees() {}
+}
+
+mod propublica_request_handler {
+    use serde::Deserialize;
+    use serde_json::{Error, Value};
     use url::Url;
     const PROPUBLICA_URL: &str = "https://api.propublica.org/congress/v1/";
 
@@ -15,10 +52,15 @@ mod propublica_request_handler {
     pub struct PropublicaReturn {
         pub status: String,
         pub copyright: String,
-        pub results: Vec<Value>
+        pub results: Vec<Value>,
     }
 
-    pub async fn get(client: reqwest::Client, endpoint: &str, api_key: &str) -> Result<PropublicaReturn, Error> {
+    // TODO rewrite this!
+    pub async fn get(
+        client: &reqwest::Client,
+        endpoint: &str,
+        api_key: &str,
+    ) -> Result<PropublicaReturn, Error> {
         let url = match Url::parse(PROPUBLICA_URL) {
             Ok(url) => match url.join(endpoint) {
                 Ok(url) => url,
@@ -42,20 +84,6 @@ mod propublica_request_handler {
 
         Ok(serde_json::from_str(&json).unwrap())
     }
-
-    pub async fn push_members_to_db(server_response: PropublicaReturn, db: &DatabaseConnection) -> Result<(), DbErr> {
-        let senate_members = server_response.results[0]["members"].as_array().expect("Error Deserializing JSON!").to_vec();
-
-        let members: Vec<members::ActiveModel> = senate_members.iter().map(|x| 
-            members::ActiveModel::from_json(json!(x)).expect("Conversion to Model Object Failed")
-        ).collect();
-    
-        match Members::insert_many(members).exec(db).await {
-            Err(e) => Err(e),
-            Ok(_) => Ok(())
-
-        }
-    }
 }
 
 #[tokio::main]
@@ -66,29 +94,113 @@ async fn main() {
     let fec_key = env::var("FEC_KEY").expect("PROPUBLICA_KEY must be set");
     let congress_no = env::var("CONGRESS").expect("CONGRESS must be set");
 
-    let connection: DatabaseConnection = Database::connect(&database_url).await.expect("Error initializing DB connnection");
+    let test_run = true;
+
+    let connection: DatabaseConnection = Database::connect(&database_url)
+        .await
+        .expect("Error initializing DB connnection");
 
     let client = reqwest::Client::new();
 
-    let senate_response = propublica_request_handler::get(
-        client,
-        &format!(
-            "{congress}/{chamber}/members.json?in_office=True",
-            congress = &congress_no,
-            chamber = &"senate"
-        ),
-        &propublica_key,
-    )
-    .await.unwrap();
+    // get congressional bio info for current members
+    let senate_members_vec = {
+        let senate_response = propublica_request_handler::get(
+            &client,
+            &format!(
+                "{congress}/{chamber}/members.json?in_office=True",
+                congress = &congress_no,
+                chamber = &"senate"
+            ),
+            &propublica_key,
+        )
+        .await
+        .unwrap();
 
-    match propublica_request_handler::push_members_to_db(senate_response, &connection).await {
-        Err(e) => {
-            println!("Error Pushing Senate Members to DB: {}", e)
-        },
-        Ok(_) => {
-            println!("Succesfully Pushed Senate Members to DB")
+        let senate_members = senate_response.results[0]["members"]
+            .as_array()
+            .expect("Error Deserializing JSON!")
+            .to_vec();
+
+        let mut members: Vec<members::ActiveModel> = senate_members
+            .iter()
+            .map(|x| {
+                members::ActiveModel::from_json(json!(x))
+                    .expect("Conversion to Model Object Failed")
+            })
+            .collect();
+
+        for member in members.iter_mut() {
+            (*member).chamber = ActiveValue::set(Some("senate".to_owned()));
         }
+
+        members
     };
 
+    let house_rep_members_vec = {
+        let house_response = propublica_request_handler::get(
+            &client,
+            &format!(
+                "{congress}/{chamber}/members.json?in_office=True",
+                congress = &congress_no,
+                chamber = &"house"
+            ),
+            &propublica_key,
+        )
+        .await
+        .unwrap();
 
+        let house_members = house_response.results[0]["members"]
+            .as_array()
+            .expect("Error Deserializing JSON!")
+            .to_vec();
+
+        let mut members: Vec<members::ActiveModel> = house_members
+            .iter()
+            .map(|x| {
+                members::ActiveModel::from_json(json!(x))
+                    .expect("Conversion to Model Object Failed")
+            })
+            .collect();
+
+        for member in members.iter_mut() {
+            (*member).chamber = ActiveValue::set(Some("house".to_owned()));
+
+            if (*member).next_election.is_not_set() {
+                (*member).next_election = ActiveValue::set(None);
+            }
+
+            // The American Samoa (AS) send a Rep, but they don't vote
+            // propublica leaves these values "unset" for the AS rep
+            // and sea-orm breaks when some objects have values set and others dont
+            if (*member).state.eq(&ActiveValue::set("AS".to_owned())) {
+                (*member).missed_votes_pct = ActiveValue::set(None);
+                (*member).votes_with_party_pct = ActiveValue::set(None);
+                (*member).votes_against_party_pct = ActiveValue::set(None);
+            }
+        }
+
+        members
+    };
+
+    let congress_members_vec = [senate_members_vec, house_rep_members_vec].concat();
+
+    // Take JSON, and parse it into member objects, assign chamber value, push to DB
+    if !test_run {
+        match {
+            Members::insert_many(congress_members_vec.to_vec())
+                .exec(&connection)
+                .await
+        } {
+            Err(e) => {
+                println!("Error Pushing members of congress to DB: {}", e)
+            }
+            Ok(_) => {
+                println!("Succesfully Pushed members of congress to DB")
+            }
+        }
+    }
+
+    for member in congress_members_vec {
+        println!("{:?}", member.fec_candidate_id);
+    }
 }
