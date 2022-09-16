@@ -5,10 +5,63 @@ use sea_orm::{ActiveModelTrait, ActiveValue, Database, DatabaseConnection, Entit
 use serde_json::json;
 use std::env;
 
+mod fec_data_handler {
+    use std::{
+        fs::{self, File},
+        io::{self, BufRead},
+        path::Path,
+    };
+
+    const DATA_PATH: &str = "./src/bin/";
+
+    pub struct CommitteeToCandidateData {
+        committee: String,
+        expenditure_amount: i32,
+        support_or_oppose: OpposeSupportIndicator,
+        election_cycle: String,
+        candidate_fec_id: String,
+    }
+
+    pub enum OpposeSupportIndicator {
+        Support,
+        Oppose,
+    }
+
+    pub fn parse_bulk_committee_to_candidate_data() -> Vec<CommitteeToCandidateData> {
+        /*
+        * Data from: https://www.fec.gov/data/browse-data/?tab=bulk-data
+        * Data schema: https://www.fec.gov/campaign-finance-data/contributions-committees-candidates-file-description/
+        */
+        let root_path = Path::new(DATA_PATH).join("contributions_from_committee_ind_expenditures/");
+        let paths = fs::read_dir(root_path).unwrap();
+
+        for path in paths {
+            let file = File::open(path.expect("").path()).expect("error reading file");
+            if let lines = io::BufReader::new(file).lines() {
+                
+                for line in lines {
+                    if let Ok(ip) = line {
+                        let row = ip.split('|').collect::<Vec<&str>>();
+
+                    }
+                }
+            }
+        }
+
+        return vec![];
+    }
+}
+
 mod open_fec_handler {
     use serde::Deserialize;
     use serde_json::{Error, Value};
     use url::Url;
+
+    use std::fs::File;
+    use std::io::{self, BufRead};
+    use std::path::Path;
+
+    const OPEN_FEC_URL: &str = "https://api.open.fec.gov/v1/";
 
     #[derive(Deserialize)]
     struct OpenFecPagination {
@@ -25,17 +78,32 @@ mod open_fec_handler {
         pub results: Vec<Value>,
     }
 
-    impl OpenFecPagination {
-        pub fn next_page() {
-            todo!()
-        }
-    }
+    async fn get(
+        client: &reqwest::Client,
+        endpoint: &str,
+        api_key: &str,
+    ) -> Result<OpenFecReturn, Error> {
+        let base_url = Url::parse(OPEN_FEC_URL).expect("Open FEC base url broken");
 
-    async fn get(client: &reqwest::Client, endpoint: &str, api_key: &str) -> Result<OpenFecReturn, Error>{
-        todo!();
-    }
+        let url = base_url
+            .join(endpoint)
+            .expect("Error Joining FEC URL with given Endpoint");
 
-    pub async fn get_schedule_e_filings() {}
+        let json = client
+            .get(url.as_str())
+            .header("x-api-key", api_key)
+            .send()
+            .await
+            .expect("Error when requesting FEC data")
+            .text()
+            .await
+            .expect("Error Decoding JSON to text");
+
+        let decoded_json =
+            serde_json::from_str(&json).expect("Error Decoding JSON to serde_json object");
+
+        Ok(decoded_json)
+    }
 
     pub async fn get_schedule_e_totals_by_candidate() {}
 
@@ -61,33 +129,34 @@ mod propublica_request_handler {
         endpoint: &str,
         api_key: &str,
     ) -> Result<PropublicaReturn, Error> {
-        let url = match Url::parse(PROPUBLICA_URL) {
-            Ok(url) => match url.join(endpoint) {
-                Ok(url) => url,
-                Err(e) => panic!("{}", e),
-            },
-            Err(e) => panic!("{}", e),
-        };
+        let base_url = Url::parse(PROPUBLICA_URL).expect("Propublica base url broken");
 
-        let json = match client
+        let url = base_url
+            .join(endpoint)
+            .expect("Error Joining Propublica URL with given Endpoint");
+
+        let json = client
             .get(url.as_str())
             .header("x-api-key", api_key)
             .send()
             .await
-        {
-            Err(e) => panic!("{}", e),
-            Ok(res) => match res.text().await {
-                Err(e) => panic!("{}", e),
-                Ok(text) => text,
-            },
-        };
+            .expect("Error when requesting Propublica data")
+            .text()
+            .await
+            .expect("Error Decoding JSON to text");
 
-        Ok(serde_json::from_str(&json).unwrap())
+        let decoded_json =
+            serde_json::from_str(&json).expect("Error Decoding JSON to serde_json object");
+
+        Ok(decoded_json)
     }
 }
 
 #[tokio::main]
 async fn main() {
+    // open_fec_handler::read_table();
+    fec_data_handler::parse_bulk_committee_to_candidate_data();
+    return;
     dotenv().ok();
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let propublica_key = env::var("PROPUBLICA_KEY").expect("PROPUBLICA_KEY must be set");
