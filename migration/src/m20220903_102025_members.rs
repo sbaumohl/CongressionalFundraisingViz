@@ -8,7 +8,8 @@ pub struct Migration;
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        let create_members_table_sql = "CREATE TABLE IF NOT EXISTS members (
+        let create_members_table_sql = 
+        "CREATE TABLE IF NOT EXISTS members (
             id VARCHAR(255) NOT NULL PRIMARY KEY,
             chamber VARCHAR(255),
             title VARCHAR(255),
@@ -81,4 +82,10 @@ impl MigrationTrait for Migration {
             .await
             .map(|_| ())
     }
+}
+
+#[derive(Iden)]
+pub enum Members {
+    Table,
+    Id
 }
