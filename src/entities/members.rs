@@ -30,7 +30,7 @@ pub struct Model {
     pub icpsr_id: Option<String>,
     pub crp_id: Option<String>,
     pub google_entity_id: Option<String>,
-    pub fec_candidate_id: String,
+    pub fec_candidate_id: Option<String>,
     pub url: String,
     pub rss_url: Option<String>,
     pub contact_form: Option<String>,

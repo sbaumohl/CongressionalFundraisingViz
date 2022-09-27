@@ -32,7 +32,7 @@ impl MigrationTrait for Migration {
             icpsr_id VARCHAR(255),
             crp_id VARCHAR(255),
             google_entity_id VARCHAR(255),
-            fec_candidate_id VARCHAR(255) NOT NULL,
+            fec_candidate_id VARCHAR(255) UNIQUE,
             url VARCHAR(255) NOT NULL,
             rss_url VARCHAR(255),
             contact_form VARCHAR(255),
@@ -87,5 +87,6 @@ impl MigrationTrait for Migration {
 #[derive(Iden)]
 pub enum Members {
     Table,
-    Id
+    Id,
+    FecCandidateId
 }

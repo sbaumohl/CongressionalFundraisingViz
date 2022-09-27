@@ -22,7 +22,7 @@ impl MigrationTrait for Migration {
                         ForeignKey::create()
                             .name("fk-committees-candidates")
                             .from(Committees::Table, Committees::CandidateId)
-                            .to(Members::Table, Members::Id),
+                            .to(Members::Table, Members::FecCandidateId),
                     )
                     .to_owned(),
             )

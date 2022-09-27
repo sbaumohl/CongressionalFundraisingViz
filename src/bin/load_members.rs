@@ -1,9 +1,8 @@
+use std::env;
 extern crate dotenv;
-use citizensdivided::bulk_data::fec_data_handler;
-use citizensdivided::entities::{prelude::*};
+use citizensdivided::entities::{members, prelude::*};
 use dotenv::dotenv;
 use sea_orm::{ActiveValue, Database, DatabaseConnection, EntityTrait};
-use std::env;
 
 mod propublica_request_handler {
     use citizensdivided::entities::members;
@@ -86,6 +85,7 @@ mod propublica_request_handler {
     }
 }
 
+// Drop all members, add members from propublica
 #[tokio::main]
 async fn main() {
     dotenv().ok();
@@ -93,13 +93,17 @@ async fn main() {
     let propublica_key = env::var("PROPUBLICA_KEY").expect("PROPUBLICA_KEY must be set");
     let congress_no = env::var("CONGRESS").expect("CONGRESS must be set");
 
-    let test_run = false;
-
     let connection: DatabaseConnection = Database::connect(&database_url)
         .await
         .expect("Error initializing DB connnection");
 
     let client = reqwest::Client::new();
+
+    // members is the core of our table, right now, if we're refreshing the data from propublica, we should dop EVERYTHING!
+    match members::Entity::delete_many().exec(&connection).await {
+        Ok(del_res) => println!("Success clearing table: {:?}", del_res),
+        Err(e) => println!("Error clearing table: {:?}", e),
+    };
 
     // get congressional bio info for current members
     let senate_members_vec = propublica_request_handler::get_candidates(
@@ -150,45 +154,14 @@ async fn main() {
     }
 
     //  push to DB
-    if !test_run {
-        for x in congress_members_vec.iter() {
-            if x.fec_candidate_id.clone().unwrap().unwrap_or_default() == "" {
-                println!("{:?}", x);
-            }
-        }
-        let res = Members::insert_many(congress_members_vec.clone())
-            .exec(&connection)
-            .await;
-        println!("Pushed Members to DB! {:?}", res);
-    }
-
-    // scrape data from data downloads
-
-    // this vec helps me ensure all committees comply with the foreign key constraint in the db
-
-    let member_ids: Vec<String> = congress_members_vec
-        .iter()
-        .map(|c| c.fec_candidate_id.to_owned().unwrap().unwrap_or_default())
-        .collect();
-
-    // let ind_expenditures = fec_data_handler::parse_bulk_committee_to_candidate_data();
-    let mut committees = fec_data_handler::parse_bulk_committees();
-
-    committees.retain(|e| {
-        e.candidate_id.to_owned().unwrap().is_none()
-            || member_ids.contains(&e.candidate_id.to_owned().unwrap().unwrap())
-    });
-
-    if !test_run {
-        let committees_upload_response =
-            Committees::insert_many(committees[0..5000].to_vec()).exec(&connection).await;
-
-        match committees_upload_response {
-            Ok(f) => println!("Pushed Committees to DB!"),
-            Err(e) => println!("Error pushing committees {}", e),
-        }
-
-        // let independent_expenditures_response =
-        //     IndependentExpenditures::insert_many(ind_expenditures);
-    }
+    let res = Members::insert_many(congress_members_vec)
+        .exec(&connection)
+        .await;
+    match res {
+        Ok(e) => println!(
+            "Success Inserting Members, last inserted index was: {:?}",
+            e
+        ),
+        Err(e) => println!("Error Inserting Members: {}", e),
+    };
 }

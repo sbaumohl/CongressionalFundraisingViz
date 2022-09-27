@@ -1,129 +1,96 @@
 pub mod fec_data_handler {
+    use crate::entities::*;
+    use sea_orm::ActiveValue;
     use std::{
         fs::{self, File},
         io::{self, BufRead},
-        path::{Path},
+        path::{Path, PathBuf},
     };
 
-    const DATA_PATH: &str = "./src/bin/";
-    // Data from: https://www.fec.gov/data/browse-data/?tab=bulk-data
-
-    #[derive(Debug)]
-    pub struct CommitteeToCandidateData {
-        committee: String,
-        expenditure_amount: i32,
-        support_or_oppose: OpposeSupportIndicator,
-        election_cycle: String,
-        candidate_fec_id: String,
-    }
-
-    #[derive(Debug, PartialEq, Eq)]
-    pub enum OpposeSupportIndicator {
-        Support,
-        Oppose,
-    }
-
-    pub fn parse_bulk_committees() -> Vec<Committee> {
-        todo!();
-         /*
-         * Data schema: https://www.fec.gov/campaign-finance-data/committee-master-file-description/
-         */
-        let root_path = Path::new(DATA_PATH).join("committees/");
+    // sorts paths to files  by file name in said folder. This is important for when data about the an entity changes year over year. Therefore we apply the newest data last.
+    fn get_sorted_path_bufs(folder: &str) -> Vec<PathBuf> {
+        let root_path = Path::new("./src/bin/").join(folder);
         let paths = fs::read_dir(root_path).unwrap();
 
-        let mut data: Vec<CommitteeToCandidateData> = Vec::new();
+        let mut sorted_paths: Vec<PathBuf> = paths
+            .map(|path| path.expect("Invalid Path").path())
+            .collect();
+
+        sorted_paths.sort_by(|a, b| a.file_name().cmp(&b.file_name().to_owned()));
+
+        return sorted_paths;
+    }
+
+    // Data from: https://www.fec.gov/data/browse-data/?tab=bulk-data
+    pub fn parse_bulk_committees() -> Vec<committees::ActiveModel> {
+        // Data schema: https://www.fec.gov/campaign-finance-data/committee-master-file-description/
+
+        let paths = get_sorted_path_bufs("committees/");
+
+        let mut committees: Vec<committees::ActiveModel> = Vec::new();
 
         // each path contains bulk data for a single election cycle (2 years)
-        // which is why I worry about differing election cycles for each file when I merge rows
+        // committee id's are unique, and the committee may rebrand, so I take the newest data first
+        // to ensure that I have the most recent committee info
 
         for path in paths {
-            let absolute_dir = path.expect("error decoding director").path();
-            let file = File::open(absolute_dir).expect("error reading file");
+            let file = File::open(&path).expect("error reading file");
             let lines = io::BufReader::new(file).lines();
-
-            let mut merged_rows: Vec<CommitteeToCandidateData> = Vec::new();
 
             for line in lines {
                 if let Ok(ip) = line {
                     let row = ip.split('|').collect::<Vec<&str>>();
 
-                    let support_or_oppose = match row[5] {
-                        "24A" => OpposeSupportIndicator::Oppose,
-                        "24E" => OpposeSupportIndicator::Support,
-                        _ => continue,
+                    let new_committee = committees::ActiveModel {
+                        id: ActiveValue::Set(row[0].to_string()),
+                        name: ActiveValue::Set(row[1].to_string()),
+                        designation: ActiveValue::Set(row[8].to_string()),
+                        org_type: ActiveValue::Set(row[12].to_string()),
+                        connected_org: ActiveValue::Set(row[13].to_string()),
+                        candidate_id: ActiveValue::Set(if row[14].to_string().eq("") {
+                            None
+                        } else {
+                            Some(row[14].to_string())
+                        }),
                     };
-                    let committee = row[0].to_owned();
-                    let candidate_fec_id = row[16].to_owned();
-                    let election_cycle = match row[4].len() {
-                        18 => {
-                            let year = row[4][0..4].parse::<i32>().unwrap();
-                            (year + year % 2).to_string()
-                        }
-                        11 => {
-                            let year = format!("20{}", &row[4][0..2])
-                                .to_string()
-                                .parse::<i32>()
-                                .unwrap();
-                            (year + year % 2).to_string()
-                        }
-                        _ => panic!("INVALID DATE IN BULK DATA"),
-                    };
-                    let expenditure_amt = row[14].parse::<i32>().unwrap();
 
-                    match data.iter().position(|x| {
-                        x.candidate_fec_id == candidate_fec_id
-                            && x.support_or_oppose == support_or_oppose
-                            && x.committee == committee
-                    }) {
-                        Some(index) => data.get_mut(index).unwrap().expenditure_amount += expenditure_amt,
-                        None => data.insert(
-                            data.len(),
-                            CommitteeToCandidateData {
-                                committee,
-                                expenditure_amount: expenditure_amt,
-                                support_or_oppose,
-                                election_cycle,
-                                candidate_fec_id,
-                            },
-                        ),
+                    match committees.iter().position(|x| x.id.as_ref().eq(new_committee.id.as_ref())) {
+                        Some(position) => committees[position] = new_committee,
+                        None => {
+                            committees.insert(committees.len(), new_committee);
+                        }
                     };
                 }
             }
-            data.append(&mut merged_rows);
         }
-
-        return data;
+        return committees;
     }
+    pub fn parse_bulk_committee_to_candidate_data() -> Vec<independent_expenditures::ActiveModel> {
+        // Data schema: https://www.fec.gov/campaign-finance-data/contributions-committees-candidates-file-description/
 
-    pub fn parse_bulk_committee_to_candidate_data() -> Vec<CommitteeToCandidateData> {
-        /*
-         * Data schema: https://www.fec.gov/campaign-finance-data/contributions-committees-candidates-file-description/
-         */
-        let root_path = Path::new(DATA_PATH).join("contributions_from_committee_ind_expenditures/");
-        let paths = fs::read_dir(root_path).unwrap();
+        let paths = get_sorted_path_bufs("contributions_from_committee_ind_expenditures/");
 
-        let mut data: Vec<CommitteeToCandidateData> = Vec::new();
+        let mut data: Vec<independent_expenditures::ActiveModel> = Vec::new();
 
         // each path contains bulk data for a single election cycle (2 years)
         // which is why I worry about differing election cycles for each file when I merge rows
-
         for path in paths {
-            let absolute_dir = path.expect("error decoding director").path();
-            let file = File::open(absolute_dir).expect("error reading file");
+            let file = File::open(path).expect("error reading file");
             let lines = io::BufReader::new(file).lines();
 
-            let mut merged_rows: Vec<CommitteeToCandidateData> = Vec::new();
+            let mut merged_rows: Vec<independent_expenditures::ActiveModel> = Vec::new();
 
             for line in lines {
                 if let Ok(ip) = line {
                     let row = ip.split('|').collect::<Vec<&str>>();
 
                     let support_or_oppose = match row[5] {
-                        "24A" => OpposeSupportIndicator::Oppose,
-                        "24E" => OpposeSupportIndicator::Support,
+                        "24A" => "O",
+                        "24E" => "S",
                         _ => continue,
-                    };
-                    let committee = row[0].to_owned();
+                    }
+                    .to_owned();
+                    let committee_id = row[0].to_owned();
                     let candidate_fec_id = row[16].to_owned();
                     let election_cycle = match row[4].len() {
                         18 => {
@@ -142,21 +109,28 @@ pub mod fec_data_handler {
                     let expenditure_amt = row[14].parse::<i32>().unwrap();
 
                     match data.iter().position(|x| {
-                        x.candidate_fec_id == candidate_fec_id
-                            && x.support_or_oppose == support_or_oppose
-                            && x.committee == committee
+                        x.candidate_id
+                            .eq(&ActiveValue::Set(candidate_fec_id.clone()))
+                            && x.committee_id.eq(&ActiveValue::set(committee_id.clone()))
+                            && x.support_oppose
+                                .eq(&ActiveValue::Set(support_or_oppose.clone()))
                     }) {
-                        Some(index) => data.get_mut(index).unwrap().expenditure_amount += expenditure_amt,
-                        None => data.insert(
-                            data.len(),
-                            CommitteeToCandidateData {
-                                committee,
-                                expenditure_amount: expenditure_amt,
-                                support_or_oppose,
-                                election_cycle,
-                                candidate_fec_id,
-                            },
-                        ),
+                        Some(index) => {
+                            let item = data.get_mut(index).unwrap();
+                            let new_amt = item.amount.as_ref() + expenditure_amt;
+                            item.amount = ActiveValue::Set(new_amt);
+                        }
+                        None => {
+                            let item = independent_expenditures::ActiveModel {
+                                id: ActiveValue::NotSet,
+                                committee_id: ActiveValue::Set(committee_id),
+                                candidate_id: ActiveValue::Set(candidate_fec_id),
+                                support_oppose: ActiveValue::Set(support_or_oppose),
+                                election_cycle: ActiveValue::Set(election_cycle),
+                                amount: ActiveValue::Set(expenditure_amt),
+                            };
+                            data.insert(data.len(), item)
+                        }
                     };
                 }
             }
