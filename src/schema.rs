@@ -1,7 +1,7 @@
-use async_graphql::{Object, Context};
-use sea_orm::{DbErr, DatabaseConnection, EntityTrait};
+use async_graphql::{ComplexObject, Context, Object};
+use sea_orm::*;
 
-use crate::entities::{members, prelude::*};
+use crate::entities::{prelude::*, *};
 
 pub(crate) struct QueryRoot;
 
@@ -15,4 +15,10 @@ impl QueryRoot {
         let db = ctx.data::<DatabaseConnection>().unwrap();
         Members::find().all(db).await
     }
+
+    async fn committees(&self, ctx:&Context<'_>) -> Result<Vec<committees::Model>, DbErr> {
+        let db = ctx.data::<DatabaseConnection>().unwrap();
+        Committees::find().all(db).await
+    }
+    
 }

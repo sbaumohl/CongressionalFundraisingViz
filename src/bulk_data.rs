@@ -7,7 +7,7 @@ pub mod fec_data_handler {
         path::{Path, PathBuf},
     };
 
-    // sorts paths to files  by file name in said folder. This is important for when data about the an entity changes year over year. Therefore we apply the newest data last.
+    // sorts paths to files  by file name in said folder. This is important for when data about the an entity changes year over year. Therefore we apply the newest data last, overwriting older data
     fn get_sorted_path_bufs(folder: &str) -> Vec<PathBuf> {
         let root_path = Path::new("./src/bin/").join(folder);
         let paths = fs::read_dir(root_path).unwrap();
@@ -19,6 +19,14 @@ pub mod fec_data_handler {
         sorted_paths.sort_by(|a, b| a.file_name().cmp(&b.file_name().to_owned()));
 
         return sorted_paths;
+    }
+
+    fn none_if_empty(x: &str) -> Option<String> {
+        if x.eq("") {
+            None
+        } else {
+            Some(x.to_string())
+        }
     }
 
     // Data from: https://www.fec.gov/data/browse-data/?tab=bulk-data
@@ -46,15 +54,14 @@ pub mod fec_data_handler {
                         name: ActiveValue::Set(row[1].to_string()),
                         designation: ActiveValue::Set(row[8].to_string()),
                         org_type: ActiveValue::Set(row[12].to_string()),
-                        connected_org: ActiveValue::Set(row[13].to_string()),
-                        candidate_id: ActiveValue::Set(if row[14].to_string().eq("") {
-                            None
-                        } else {
-                            Some(row[14].to_string())
-                        }),
+                        connected_org: ActiveValue::Set(none_if_empty(row[13])),
+                        candidate_id: ActiveValue::Set(none_if_empty(row[14])),
                     };
 
-                    match committees.iter().position(|x| x.id.as_ref().eq(new_committee.id.as_ref())) {
+                    match committees
+                        .iter()
+                        .position(|x| x.id.as_ref().eq(new_committee.id.as_ref()))
+                    {
                         Some(position) => committees[position] = new_committee,
                         None => {
                             committees.insert(committees.len(), new_committee);

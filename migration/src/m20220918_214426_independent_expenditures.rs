@@ -23,13 +23,15 @@ impl MigrationTrait for Migration {
                         ForeignKey::create()
                             .name("fk-independent-expenditures-committees")
                             .from(IndependentExpenditures::Table, IndependentExpenditures::CommitteeId)
-                            .to(Committees::Table, Committees::Id),
+                            .to(Committees::Table, Committees::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
                     )
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk-independent-expenditures-candidates")
                             .from(IndependentExpenditures::Table, IndependentExpenditures::CandidateId)
-                            .to(Members::Table, Members::Id),
+                            .to(Members::Table, Members::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
                     )
                     .to_owned()
             )

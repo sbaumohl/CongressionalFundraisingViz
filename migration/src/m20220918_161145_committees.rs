@@ -16,13 +16,14 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Committees::Name).string().not_null())
                     .col(ColumnDef::new(Committees::Designation).string().not_null())
                     .col(ColumnDef::new(Committees::OrgType).string().not_null())
-                    .col(ColumnDef::new(Committees::ConnectedOrg).string().not_null())
+                    .col(ColumnDef::new(Committees::ConnectedOrg).string())
                     .col(ColumnDef::new(Committees::CandidateId).string())
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk-committees-candidates")
                             .from(Committees::Table, Committees::CandidateId)
-                            .to(Members::Table, Members::FecCandidateId),
+                            .to(Members::Table, Members::FecCandidateId)
+                            .on_delete(ForeignKeyAction::Cascade),
                     )
                     .to_owned(),
             )

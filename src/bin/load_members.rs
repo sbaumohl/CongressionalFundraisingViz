@@ -101,7 +101,7 @@ async fn main() {
 
     // members is the core of our table, right now, if we're refreshing the data from propublica, we should dop EVERYTHING!
     match members::Entity::delete_many().exec(&connection).await {
-        Ok(del_res) => println!("Success clearing table: {:?}", del_res),
+        Ok(del_res) => println!("Success clearing table: {:?}. NOTE: THIS CASCADE DELETES THINGS AS WELL!", del_res),
         Err(e) => println!("Error clearing table: {:?}", e),
     };
 

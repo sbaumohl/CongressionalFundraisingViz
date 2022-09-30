@@ -21,4 +21,5 @@ async-graphql-rocket = "4.0.4"
 rocket = { version = "^0.5.0-rc.2", features = ["json"] }
 
 [[bin]]
-name = "scraping"
+name = "load_committees"
+# name = "load_members"
