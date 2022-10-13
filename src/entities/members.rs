@@ -63,19 +63,19 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(has_many = "super::committees::Entity")]
     Committee,
+    #[sea_orm(has_many = "super::independent_expenditures::Entity")]
+    IndependentExpenditures,
 }
-
-// impl RelationTrait for Relation {
-//     fn def(&self) -> RelationDef {
-//         match self {
-//             Self::Committee => Entity::has_many(super::committees::Entity).into()
-//         }
-//     }
-// }
 
 impl Related<super::committees::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Committee.def()
+    }
+}
+
+impl Related<super::independent_expenditures::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::IndependentExpenditures.def()
     }
 }
 
@@ -85,7 +85,11 @@ impl ActiveModelBehavior for ActiveModel {}
 impl Model {
     async fn committees(&self, ctx: &Context<'_>) -> Result<Vec<super::committees::Model>, DbErr> {
         let db = ctx.data::<DatabaseConnection>().unwrap();
-        // self.find_related(super::committees::Entity).all(db).await
         self.find_related(super::committees::Entity).all(db).await
+    }
+
+    async fn independent_expenditures(&self, ctx: &Context<'_>) -> Result<Vec<super::independent_expenditures::Model>, DbErr> {
+        let db = ctx.data::<DatabaseConnection>().unwrap();
+        self.find_related(super::independent_expenditures::Entity).all(db).await
     }
 }

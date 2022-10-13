@@ -14,23 +14,23 @@ impl MigrationTrait for Migration {
                     .table(IndependentExpenditures::Table)
                     .if_not_exists()
                     .col(ColumnDef::new(IndependentExpenditures::Id).integer().not_null().auto_increment().primary_key())
-                    .col(ColumnDef::new(IndependentExpenditures::CommitteeId).string().not_null())
+                    .col(ColumnDef::new(IndependentExpenditures::SpenderCommittee).string().not_null())
                     .col(ColumnDef::new(IndependentExpenditures::Amount).integer().not_null())
                     .col(ColumnDef::new(IndependentExpenditures::SupportOppose).string().not_null())
                     .col(ColumnDef::new(IndependentExpenditures::ElectionCycle).string().not_null())
-                    .col(ColumnDef::new(IndependentExpenditures::CandidateId).string().not_null())
+                    .col(ColumnDef::new(IndependentExpenditures::RecipientCandidate).string().not_null())
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk-independent-expenditures-committees")
-                            .from(IndependentExpenditures::Table, IndependentExpenditures::CommitteeId)
+                            .from(IndependentExpenditures::Table, IndependentExpenditures::SpenderCommittee)
                             .to(Committees::Table, Committees::Id)
                             .on_delete(ForeignKeyAction::Cascade),
                     )
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk-independent-expenditures-candidates")
-                            .from(IndependentExpenditures::Table, IndependentExpenditures::CandidateId)
-                            .to(Members::Table, Members::Id)
+                            .from(IndependentExpenditures::Table, IndependentExpenditures::RecipientCandidate)
+                            .to(Members::Table, Members::FecCandidateId)
                             .on_delete(ForeignKeyAction::Cascade),
                     )
                     .to_owned()
@@ -48,11 +48,11 @@ impl MigrationTrait for Migration {
 /// Learn more at https://docs.rs/sea-query#iden
 #[derive(Iden)]
 enum IndependentExpenditures {
-    Id,
     Table,
-    CommitteeId,
+    Id,
+    SpenderCommittee,
     Amount,
     SupportOppose,
     ElectionCycle,
-    CandidateId
+    RecipientCandidate
 }

@@ -3,8 +3,8 @@
 use async_graphql::SimpleObject;
 use sea_orm::entity::prelude::*;
 
-
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, SimpleObject)]
+#[graphql(name = "Committees")]
 #[sea_orm(table_name = "committees")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
@@ -23,14 +23,22 @@ pub enum Relation {
         from = "Column::CandidateId",
         to = "super::members::Column::FecCandidateId",
         on_update = "NoAction",
-        on_delete = "NoAction"
+        on_delete = "Cascade"
     )]
     Members,
+    #[sea_orm(has_many = "super::independent_expenditures::Entity")]
+    IndependentExpenditures,
 }
 
 impl Related<super::members::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Members.def()
+    }
+}
+
+impl Related<super::independent_expenditures::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::IndependentExpenditures.def()
     }
 }
 

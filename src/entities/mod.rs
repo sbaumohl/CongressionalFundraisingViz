@@ -5,3 +5,4 @@ pub mod prelude;
 pub mod committees;
 pub mod members;
 pub mod independent_expenditures;
+pub mod committee_contributions;

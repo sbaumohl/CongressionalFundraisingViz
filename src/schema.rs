@@ -1,4 +1,4 @@
-use async_graphql::{ComplexObject, Context, Object};
+use async_graphql::{Context, Object};
 use sea_orm::*;
 
 use crate::entities::{prelude::*, *};
@@ -7,18 +7,34 @@ pub(crate) struct QueryRoot;
 
 #[Object]
 impl QueryRoot {
-    async fn hello(&self) -> String {
-        "Hello GraphQL".to_owned()
-    }
 
-    async fn members(&self, ctx: &Context<'_>) -> Result<Vec<members::Model>, DbErr> {
+    async fn members(
+        &self,
+        ctx: &Context<'_>,
+        fec_candidate_id: Option<String>,
+    ) -> async_graphql::Result<Vec<members::Model>, DbErr> {
         let db = ctx.data::<DatabaseConnection>().unwrap();
-        Members::find().all(db).await
+        match fec_candidate_id {
+            Some(id) => {
+                Members::find()
+                    .filter(members::Column::FecCandidateId.eq(id))
+                    .all(db)
+                    .await
+            }
+            None => Members::find().all(db).await,
+        }
     }
 
-    async fn committees(&self, ctx:&Context<'_>) -> Result<Vec<committees::Model>, DbErr> {
+    async fn committees<'a>(&self, ctx: &Context<'a>) -> Result<Vec<committees::Model>, DbErr> {
         let db = ctx.data::<DatabaseConnection>().unwrap();
         Committees::find().all(db).await
     }
-    
+
+    async fn independent_expenditures(
+        &self,
+        ctx: &Context<'_>,
+    ) -> Result<Vec<independent_expenditures::Model>, DbErr> {
+        let db = ctx.data::<DatabaseConnection>().unwrap();
+        IndependentExpenditures::find().all(db).await
+    }
 }

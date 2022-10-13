@@ -1,7 +1,5 @@
-use std::env;
-extern crate dotenv;
 use citizensdivided::entities::{members, prelude::*};
-use dotenv::dotenv;
+use citizensdivided::EnvConfig;
 use sea_orm::{ActiveValue, Database, DatabaseConnection, EntityTrait};
 
 mod propublica_request_handler {
@@ -64,12 +62,11 @@ mod propublica_request_handler {
         .await
         .expect("Error Requesting Senate Members");
 
-        let members = returned_candidates.results[0]["members"]
+        let mut member_models: Vec<members::ActiveModel> = returned_candidates.results[0]
+            ["members"]
             .as_array()
             .expect("Error Deserializing JSON!")
-            .to_vec();
-
-        let mut member_models: Vec<members::ActiveModel> = members
+            .to_vec()
             .iter()
             .map(|x| {
                 members::ActiveModel::from_json(json!(x))
@@ -88,37 +85,38 @@ mod propublica_request_handler {
 // Drop all members, add members from propublica
 #[tokio::main]
 async fn main() {
-    dotenv().ok();
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let propublica_key = env::var("PROPUBLICA_KEY").expect("PROPUBLICA_KEY must be set");
-    let congress_no = env::var("CONGRESS").expect("CONGRESS must be set");
+    let config = EnvConfig::new();
 
-    let connection: DatabaseConnection = Database::connect(&database_url)
+    let connection: DatabaseConnection = Database::connect(&config.database_url)
         .await
         .expect("Error initializing DB connnection");
 
     let client = reqwest::Client::new();
 
-    // members is the core of our table, right now, if we're refreshing the data from propublica, we should dop EVERYTHING!
+    // members is the core of our data, right now, if we're refreshing the data from propublica, we should dop EVERYTHING!
+    // TODO do a soft update, only changing what's different
     match members::Entity::delete_many().exec(&connection).await {
-        Ok(del_res) => println!("Success clearing table: {:?}. NOTE: THIS CASCADE DELETES THINGS AS WELL!", del_res),
+        Ok(del_res) => println!(
+            "Success clearing table: {:?}. NOTE: THIS CASCADE DELETES THINGS AS WELL!",
+            del_res
+        ),
         Err(e) => println!("Error clearing table: {:?}", e),
     };
 
     // get congressional bio info for current members
     let senate_members_vec = propublica_request_handler::get_candidates(
         &client,
-        &propublica_key,
+        &config.propublica_key,
         &"senate",
-        &congress_no,
+        &config.congress.to_string(),
     )
     .await;
 
     let house_members_vec = propublica_request_handler::get_candidates(
         &client,
-        &propublica_key,
+        &config.propublica_key,
         &"house",
-        &congress_no,
+        &config.congress.to_string(),
     )
     .await;
 
