@@ -1,13 +1,15 @@
 extern crate dotenv;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, BufRead};
 
-use citizensdivided::EnvConfig;
+use citizensdivided::entities::{committees, independent_expenditures, prelude::*};
 use citizensdivided::fec_data::{get_sorted_path_bufs, parse_filing_date};
-use citizensdivided::entities::{committees, prelude::*, independent_expenditures};
-use citizensdivided::{fec_data, entities::members};
+use citizensdivided::EnvConfig;
+use citizensdivided::{entities::members, fec_data};
+use indicatif::{ProgressBar, ProgressStyle};
 use sea_orm::{
-    ColumnTrait, Database, DatabaseConnection, EntityTrait, QueryFilter, QuerySelect, ActiveValue
+    ActiveValue, ColumnTrait, Database, DatabaseConnection, EntityTrait, QueryFilter, QuerySelect,
 };
 
 pub fn parse_bulk_committee_to_candidate_data() -> Vec<independent_expenditures::ActiveModel> {
@@ -16,14 +18,29 @@ pub fn parse_bulk_committee_to_candidate_data() -> Vec<independent_expenditures:
     let paths = get_sorted_path_bufs("contributions_from_committee_ind_expenditures/");
 
     let mut merged_data: Vec<independent_expenditures::ActiveModel> = Vec::new();
-    
+
     for path in paths {
-        let file = File::open(path).expect("error reading file");
+        let file = File::open(&path).expect("error reading file");
         let lines = io::BufReader::new(file).lines();
 
-        let mut aggregated_rows: Vec<independent_expenditures::ActiveModel> = Vec::new();
+        // Use Hashmap (with the key being a composite of properties we want to merge) to turn O(n) lookup to O(k)
+        let mut aggregated_rows: HashMap<String, independent_expenditures::ActiveModel> = HashMap::new();
 
-        for line in lines {
+        // progress bar
+        let bar = ProgressBar::new_spinner();
+        bar.set_style(
+            ProgressStyle::with_template(
+                "{prefix} {spinner:.cyan/blue} {pos:>7}/{len:7} [{elapsed_precise}] {msg}",
+            )
+            .unwrap()
+            .progress_chars("##-"),
+        );
+        bar.set_prefix(format!(
+            "Parsing {}",
+            path.file_name().unwrap().to_str().unwrap()
+        ));
+
+        for line in bar.wrap_iter(lines) {
             if let Ok(ip) = line {
                 let row = ip.split('|').collect::<Vec<&str>>();
 
@@ -38,34 +55,29 @@ pub fn parse_bulk_committee_to_candidate_data() -> Vec<independent_expenditures:
                 let election_cycle = parse_filing_date(row[4]);
                 let expenditure_amt = row[14].parse::<i32>().unwrap();
 
-                match aggregated_rows.iter().position(|x| {
-                    x.spender_committee
-                        .eq(&ActiveValue::Set(candidate_fec_id.clone()))
-                        && x.spender_committee
-                            .eq(&ActiveValue::set(spender_committee.clone()))
-                        && x.support_oppose
-                            .eq(&ActiveValue::Set(support_or_oppose.clone()))
-                }) {
-                    Some(index) => {
-                        let item = aggregated_rows.get_mut(index).unwrap();
-                        let new_amt = item.amount.as_ref() + expenditure_amt;
-                        item.amount = ActiveValue::Set(new_amt);
-                    }
-                    None => {
-                        let item = independent_expenditures::ActiveModel {
-                            id: ActiveValue::NotSet,
-                            spender_committee: ActiveValue::Set(spender_committee),
-                            recipient_candidate: ActiveValue::Set(candidate_fec_id),
-                            support_oppose: ActiveValue::Set(support_or_oppose),
-                            election_cycle: ActiveValue::Set(election_cycle),
-                            amount: ActiveValue::Set(expenditure_amt),
-                        };
-                        aggregated_rows.insert(aggregated_rows.len(), item)
-                    }
+                let key = format!(
+                    "{} -> {} : {}",
+                    spender_committee, candidate_fec_id, support_or_oppose
+                );
+
+                let item = independent_expenditures::ActiveModel {
+                    id: ActiveValue::NotSet,
+                    spender_committee: ActiveValue::Set(spender_committee),
+                    recipient_candidate: ActiveValue::Set(candidate_fec_id),
+                    support_oppose: ActiveValue::Set(support_or_oppose),
+                    election_cycle: ActiveValue::Set(election_cycle),
+                    amount: ActiveValue::Set(0),
                 };
+
+                // get the entry at key, if it doesn't exist, add a new entry with amount 0.
+                // then, using that reference, increment the amount value. This ensures all unadded entries are added w/o duplicates.
+                let row_ref = aggregated_rows.entry(key).or_insert(item);
+                let new_amt = *row_ref.amount.as_ref() + expenditure_amt;
+                (*row_ref).amount = ActiveValue::Set(new_amt);
             }
         }
-        merged_data.append(&mut aggregated_rows);
+        bar.finish();
+        merged_data.append(&mut Vec::from_iter(aggregated_rows.values().cloned()));
     }
 
     return merged_data;
@@ -114,9 +126,7 @@ async fn main() {
             && committees_ids.contains(&e.spender_committee.to_owned().unwrap())
     });
 
-
     for slice in fec_data::page_data(ind_expenditures, 10_000) {
-
         let committees_upload_response = IndependentExpenditures::insert_many(slice)
             .exec(&connection)
             .await;

@@ -19,6 +19,7 @@ serde_json = "1.0"
 async-graphql = {version = "4.0.4", features = ["chrono", "decimal"] }
 async-graphql-rocket = "4.0.4"
 rocket = { version = "^0.5.0-rc.2", features = ["json"] }
+indicatif = "0.17.1"
 
 [[bin]]
 name = "load_committees"

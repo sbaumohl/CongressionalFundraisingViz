@@ -11,6 +11,11 @@ pub struct EnvConfig {
 }
 
 impl EnvConfig {
+    /// Creates a new [`EnvConfig`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if an expected environment variable is missing.
     pub fn new() -> Self {
         dotenv().ok();
         Self {
@@ -63,10 +68,10 @@ pub mod fec_data {
         loop {
             let left = right;
             right = cmp::min(right + page_size, v.len());
-
+            
             paged_v.insert(paged_v.len(), v[left..right].to_vec());
 
-            if right >= v.len() - 1 {
+            if v.len() < 1 || right >= v.len()  - 1 {
                 break;
             }
         }
