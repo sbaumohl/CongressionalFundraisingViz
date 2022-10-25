@@ -4,7 +4,6 @@ use std::io::{self, BufRead};
 
 use citizensdivided::entities::{prelude::*, *};
 use citizensdivided::{fec_data, EnvConfig};
-use indicatif::{ProgressBar, ProgressStyle};
 use sea_orm::{
     ActiveValue, ColumnTrait, Database, DatabaseConnection, EntityTrait, QueryFilter, QuerySelect,
 };
@@ -24,18 +23,7 @@ pub fn parse_bulk_committee_disbursements() -> Vec<committee_contributions::Acti
         let mut mapped_rows: HashMap<String, committee_contributions::ActiveModel> = HashMap::new();
 
         // progress bar
-        let bar = ProgressBar::new_spinner();
-        bar.set_style(
-            ProgressStyle::with_template(
-                "{prefix} {spinner:.cyan/blue} {pos:>7}/{len:7} [{elapsed_precise}] {msg}",
-            )
-            .unwrap()
-            .progress_chars("##-"),
-        );
-        bar.set_prefix(format!(
-            "Parsing {}",
-            path.file_name().unwrap().to_str().unwrap()
-        ));
+        let bar = fec_data::new_file_reading_progress_spinner(path);
 
         for line in bar.wrap_iter(lines) {
             if let Ok(ip) = line {
@@ -69,7 +57,7 @@ pub fn parse_bulk_committee_disbursements() -> Vec<committee_contributions::Acti
                 // get the entry at key, if it doesn't exist, add a new entry with amount 0.
                 // then, using that reference, increment the amount value. This ensures all unadded entries are added w/o duplicates.
                 let disbursement = mapped_rows.entry(key).or_insert(committee_disbursement);
-                let new_amt = *disbursement.amount.as_ref() + amount;
+                let new_amt = disbursement.amount.as_ref() + amount;
                 (*disbursement).amount = ActiveValue::Set(new_amt);
             }
         }
@@ -120,8 +108,11 @@ async fn main() {
         .map(|c| c.id.to_owned())
         .collect();
 
+    // remove rows that reference non-existent candidates or committees
+    // also remove rows with 0 amounts, which happens when a amendment report cancels out a reported disbursement
     committee_contributions.retain(|e| {
-        committee_ids.contains(&e.spender_committee.to_owned().unwrap())
+        e.amount.clone().unwrap() != 0
+            && committee_ids.contains(&e.spender_committee.to_owned().unwrap())
             && committee_ids.contains(&e.recipient_committee.to_owned().unwrap())
             && member_ids.contains(&e.recipient_candidate.to_owned().unwrap())
     });

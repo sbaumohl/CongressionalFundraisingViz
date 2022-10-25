@@ -1,7 +1,7 @@
 pub mod entities;
 mod schema;
 
-use citizensdivided::EnvConfig;
+use citizensdivided::{EnvConfig, entities::prelude::Members};
 
 use async_graphql::{EmptyMutation, EmptySubscription, Schema};
 use async_graphql_rocket::*;
@@ -9,7 +9,8 @@ use rocket::{get, launch, routes, State};
 use schema::*;
 
 use async_graphql_rocket::GraphQLRequest;
-use sea_orm::Database;
+use sea_orm::{Database, EntityTrait, QuerySelect, ColumnTrait};
+use crate::entities::{prelude::*, *};
 
 type SchemaType = Schema<QueryRoot, EmptyMutation, EmptySubscription>;
 
@@ -24,8 +25,8 @@ async fn index() -> &'static str {
 }
 
 #[get("/congress")]
-fn congress(congress_no: &State<String>) -> String {
-    congress_no.to_string()
+fn congress(congress: &State<u8>) -> String {
+    congress.to_string()
 }
 
 #[launch]
@@ -39,6 +40,9 @@ async fn rocket() -> _ {
     let schema = Schema::build(QueryRoot, EmptyMutation, EmptySubscription)
         .data(connection.clone())
         .finish();
+
+    // https://docs.rs/sea-orm/0.9.3/sea_orm/entity/prelude/trait.ColumnTrait.html#method.is_in
+    // let query = Members::find().column(members::Column::Id.is_in(vec![""])).all(&db);
 
     rocket::build()
         .manage(connection)

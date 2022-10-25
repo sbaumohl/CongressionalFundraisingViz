@@ -1,9 +1,10 @@
 extern crate dotenv;
-use citizensdivided::fec_data::{get_sorted_path_bufs, none_if_empty, page_data};
+use citizensdivided::fec_data::{get_sorted_path_bufs, none_if_empty, page_data, new_file_reading_progress_spinner};
 use citizensdivided::entities::{committees, members, prelude::*};
 use citizensdivided::EnvConfig;
 
 use sea_orm::{ActiveValue, ColumnTrait, Database, DatabaseConnection, EntityTrait, QueryFilter};
+use std::collections::HashMap;
 use std::fs::File;
 use std::io;
 use std::io::BufRead;
@@ -15,18 +16,22 @@ pub fn parse_bulk_committees() -> Vec<committees::ActiveModel> {
 
     let paths = get_sorted_path_bufs("committees/");
 
-    let mut committees: Vec<committees::ActiveModel> = Vec::new();
+    let mut committees: HashMap<String, committees::ActiveModel> = HashMap::new();
 
     for path in paths {
         let file = File::open(&path).expect("error reading file");
         let lines = io::BufReader::new(file).lines();
 
-        for line in lines {
+        let spinner = new_file_reading_progress_spinner(path);
+
+        for line in spinner.wrap_iter(lines) {
             if let Ok(ip) = line {
                 let row = ip.split('|').collect::<Vec<&str>>();
 
+                let id = row[0].to_string();
+
                 let new_committee = committees::ActiveModel {
-                    id: ActiveValue::Set(row[0].to_string()),
+                    id: ActiveValue::Set(id.clone()),
                     name: ActiveValue::Set(row[1].to_string()),
                     designation: ActiveValue::Set(row[8].to_string()),
                     org_type: ActiveValue::Set(row[12].to_string()),
@@ -34,19 +39,13 @@ pub fn parse_bulk_committees() -> Vec<committees::ActiveModel> {
                     candidate_id: ActiveValue::Set(none_if_empty(row[14])),
                 };
 
-                match committees
-                    .iter()
-                    .position(|x| x.id.as_ref().eq(new_committee.id.as_ref()))
-                {
-                    Some(position) => committees[position] = new_committee,
-                    None => {
-                        committees.insert(committees.len(), new_committee);
-                    }
-                };
+                committees.insert(id, new_committee);
             }
         }
+
+        spinner.finish();
     }
-    return committees;
+    return committees.values().cloned().collect();
 }
 
 #[tokio::main]

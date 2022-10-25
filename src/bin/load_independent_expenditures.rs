@@ -7,7 +7,6 @@ use citizensdivided::entities::{committees, independent_expenditures, prelude::*
 use citizensdivided::fec_data::{get_sorted_path_bufs, parse_filing_date};
 use citizensdivided::EnvConfig;
 use citizensdivided::{entities::members, fec_data};
-use indicatif::{ProgressBar, ProgressStyle};
 use sea_orm::{
     ActiveValue, ColumnTrait, Database, DatabaseConnection, EntityTrait, QueryFilter, QuerySelect,
 };
@@ -27,18 +26,7 @@ pub fn parse_bulk_committee_to_candidate_data() -> Vec<independent_expenditures:
         let mut aggregated_rows: HashMap<String, independent_expenditures::ActiveModel> = HashMap::new();
 
         // progress bar
-        let bar = ProgressBar::new_spinner();
-        bar.set_style(
-            ProgressStyle::with_template(
-                "{prefix} {spinner:.cyan/blue} {pos:>7}/{len:7} [{elapsed_precise}] {msg}",
-            )
-            .unwrap()
-            .progress_chars("##-"),
-        );
-        bar.set_prefix(format!(
-            "Parsing {}",
-            path.file_name().unwrap().to_str().unwrap()
-        ));
+        let bar = fec_data::new_file_reading_progress_spinner(path);
 
         for line in bar.wrap_iter(lines) {
             if let Ok(ip) = line {
@@ -70,9 +58,9 @@ pub fn parse_bulk_committee_to_candidate_data() -> Vec<independent_expenditures:
                 };
 
                 // get the entry at key, if it doesn't exist, add a new entry with amount 0.
-                // then, using that reference, increment the amount value. This ensures all unadded entries are added w/o duplicates.
+                // then, using that reference, increment the amount value. This adds all unadded entries w/o duplicates.
                 let row_ref = aggregated_rows.entry(key).or_insert(item);
-                let new_amt = *row_ref.amount.as_ref() + expenditure_amt;
+                let new_amt = row_ref.amount.as_ref() + expenditure_amt;
                 (*row_ref).amount = ActiveValue::Set(new_amt);
             }
         }

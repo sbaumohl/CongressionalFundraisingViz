@@ -36,6 +36,24 @@ pub mod fec_data {
         path::{Path, PathBuf},
     };
 
+    use indicatif::{ProgressStyle, ProgressBar};
+
+    pub fn new_file_reading_progress_spinner(path: PathBuf) -> ProgressBar {
+        let bar = ProgressBar::new_spinner();
+        bar.set_style(
+            ProgressStyle::with_template(
+                "{prefix} {spinner:.cyan/blue} {human_pos:>7} [{elapsed}]",
+            )
+            .unwrap(),
+        );
+        bar.set_prefix(format!(
+            "Parsing {}",
+            path.file_name().unwrap().to_str().unwrap()
+        ));
+
+        return bar
+    }
+
     /// * Some data is overwritten in later years (e.g. committees change leadership or name). By sorting the paths in order from oldest to newest, we can overwrite the older data as we go. This ensures we always have the updated info.
     pub fn get_sorted_path_bufs(folder: &str) -> Vec<PathBuf> {
         let root_path = Path::new("./src/bin/").join(folder);

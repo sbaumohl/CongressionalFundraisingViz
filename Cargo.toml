@@ -6,20 +6,29 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+# General Utils
+indicatif = "0.17.1"
+dotenv = "0.15.0"
+
+# General API Crates
 juniper = "0.15.10"
 warp = "0.3.2"
 tokio = { version = "1.20.1", features = ["full"] }
-dotenv = "0.15.0"
-reqwest = "0.11.11"
+rocket = { version = "^0.5.0-rc.2", features = ["json"] }
 url = "2.2.2"
-sea-orm = { version = "^0.9.0", features = [ "sqlx-postgres", "runtime-tokio-native-tls", "macros" ] }
-sea-schema = "0.9.3"
+reqwest = "0.11.11"
+
+# Serde Json
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-async-graphql = {version = "4.0.4", features = ["chrono", "decimal"] }
+
+# Sea ORM + Seaography (Graphql)
+sea-orm = { version = "^0.9", features = [ "sqlx-postgres", "runtime-tokio-native-tls", "macros" ] }
+sea-schema = "0.9.3"
+async-graphql = { version = "4.0.10", features = ["decimal", "chrono", "dataloader"] }
 async-graphql-rocket = "4.0.4"
-rocket = { version = "^0.5.0-rc.2", features = ["json"] }
-indicatif = "0.17.1"
+async-graphql-poem = "4.0.10"
+seaography = { version = "^0.1", features = [ "with-decimal", "with-chrono" ] }
 
 [[bin]]
 name = "load_committees"
