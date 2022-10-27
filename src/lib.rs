@@ -1,13 +1,23 @@
-extern crate dotenv;
-pub mod entities;
-
 use dotenv::dotenv;
+use sea_orm::prelude::*;
 use std::env;
+
+extern crate dotenv;
+
+pub mod entities;
+pub mod query_root;
+pub use query_root::QueryRoot;
+
+pub struct OrmDataloader {
+    pub db: DatabaseConnection,
+}
 
 pub struct EnvConfig {
     pub database_url: String,
     pub propublica_key: String,
     pub congress: u8,
+    pub complexity_limit: Option<usize>,
+    pub depth_limit: Option<usize>,
 }
 
 impl EnvConfig {
@@ -25,6 +35,12 @@ impl EnvConfig {
                 .expect("CONGRESS must be set")
                 .parse::<u8>()
                 .expect("CONGRESS_NO Env Variable u8 conversion error!"),
+            complexity_limit: env::var("COMPLEXITY_LIMIT")
+                .map(|val| val.parse::<usize>().expect("COMPLEXITY_LIMIT is not a number"))
+                .map_or(None, |val| Some(val)),
+            depth_limit: env::var("DEPTH_LIMIT")
+                .map(|val| val.parse::<usize>().expect("DEPTH_LIMIT is not a number"))
+                .map_or(None, |val| Some(val)),
         }
     }
 }
@@ -36,7 +52,7 @@ pub mod fec_data {
         path::{Path, PathBuf},
     };
 
-    use indicatif::{ProgressStyle, ProgressBar};
+    use indicatif::{ProgressBar, ProgressStyle};
 
     pub fn new_file_reading_progress_spinner(path: PathBuf) -> ProgressBar {
         let bar = ProgressBar::new_spinner();
@@ -51,7 +67,7 @@ pub mod fec_data {
             path.file_name().unwrap().to_str().unwrap()
         ));
 
-        return bar
+        return bar;
     }
 
     /// * Some data is overwritten in later years (e.g. committees change leadership or name). By sorting the paths in order from oldest to newest, we can overwrite the older data as we go. This ensures we always have the updated info.
@@ -86,10 +102,10 @@ pub mod fec_data {
         loop {
             let left = right;
             right = cmp::min(right + page_size, v.len());
-            
+
             paged_v.insert(paged_v.len(), v[left..right].to_vec());
 
-            if v.len() < 1 || right >= v.len()  - 1 {
+            if v.len() < 1 || right >= v.len() - 1 {
                 break;
             }
         }
