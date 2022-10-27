@@ -1,6 +1,8 @@
 extern crate dotenv;
-use citizensdivided::fec_data::{get_sorted_path_bufs, none_if_empty, page_data, new_file_reading_progress_spinner};
 use citizensdivided::entities::{committees, members, prelude::*};
+use citizensdivided::fec_data::{
+    get_sorted_path_bufs, new_file_reading_progress_spinner, none_if_empty, page_data,
+};
 use citizensdivided::EnvConfig;
 
 use sea_orm::{ActiveValue, ColumnTrait, Database, DatabaseConnection, EntityTrait, QueryFilter};

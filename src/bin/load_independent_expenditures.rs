@@ -23,7 +23,8 @@ pub fn parse_bulk_committee_to_candidate_data() -> Vec<independent_expenditures:
         let lines = io::BufReader::new(file).lines();
 
         // Use Hashmap (with the key being a composite of properties we want to merge) to turn O(n) lookup to O(k)
-        let mut aggregated_rows: HashMap<String, independent_expenditures::ActiveModel> = HashMap::new();
+        let mut aggregated_rows: HashMap<String, independent_expenditures::ActiveModel> =
+            HashMap::new();
 
         // progress bar
         let bar = fec_data::new_file_reading_progress_spinner(path);

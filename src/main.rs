@@ -1,52 +1,53 @@
-pub mod entities;
-mod schema;
+use async_graphql::{
+    dataloader::DataLoader,
+    http::{playground_source, GraphQLPlaygroundConfig},
+    EmptyMutation, EmptySubscription, Schema,
+};
+use async_graphql_poem::GraphQL;
+use citizensdivided::*;
+use dotenv::dotenv;
+use poem::{get, handler, listener::TcpListener, web::Html, IntoResponse, Route, Server};
+use sea_orm::Database;
+use std::env;
 
-use citizensdivided::{EnvConfig, entities::prelude::Members};
-
-use async_graphql::{EmptyMutation, EmptySubscription, Schema};
-use async_graphql_rocket::*;
-use rocket::{get, launch, routes, State};
-use schema::*;
-
-use async_graphql_rocket::GraphQLRequest;
-use sea_orm::{Database, EntityTrait, QuerySelect, ColumnTrait};
-use crate::entities::{prelude::*, *};
-
-type SchemaType = Schema<QueryRoot, EmptyMutation, EmptySubscription>;
-
-#[rocket::post("/graphql", data = "<request>", format = "application/json")]
-async fn graphql_request(schema: &State<SchemaType>, request: GraphQLRequest) -> GraphQLResponse {
-    request.execute(schema).await
+#[handler]
+async fn graphql_playground() -> impl IntoResponse {
+    Html(playground_source(GraphQLPlaygroundConfig::new("/")))
 }
 
-#[get("/")]
-async fn index() -> &'static str {
-    "Hello, World!"
-}
-
-#[get("/congress")]
-fn congress(congress: &State<u8>) -> String {
-    congress.to_string()
-}
-
-#[launch]
-async fn rocket() -> _ {
+#[tokio::main]
+async fn main() {
+    dotenv().ok();
     let config = EnvConfig::new();
-
-    let connection = Database::connect(&config.database_url)
-        .await
-        .expect("Error initializing DB connnection");
-
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::INFO)
+        .with_test_writer()
+        .init();
+    let database = Database::connect(config.database_url).await.unwrap();
+    let orm_dataloader: DataLoader<OrmDataloader> = DataLoader::new(
+        OrmDataloader {
+            db: database.clone(),
+        },
+        tokio::spawn,
+    );
     let schema = Schema::build(QueryRoot, EmptyMutation, EmptySubscription)
-        .data(connection.clone())
-        .finish();
-
-    // https://docs.rs/sea-orm/0.9.3/sea_orm/entity/prelude/trait.ColumnTrait.html#method.is_in
-    // let query = Members::find().column(members::Column::Id.is_in(vec![""])).all(&db);
-
-    rocket::build()
-        .manage(connection)
-        .manage(schema)
-        .manage(config.congress)
-        .mount("/", routes![index, graphql_request, congress])
+        .data(database)
+        .data(orm_dataloader);
+    let schema = if let Some(depth) = config.depth_limit {
+        schema.limit_depth(depth)
+    } else {
+        schema
+    };
+    let schema = if let Some(complexity) = config.complexity_limit {
+        schema.limit_complexity(complexity)
+    } else {
+        schema
+    };
+    let schema = schema.finish();
+    let app = Route::new().at("/", get(graphql_playground).post(GraphQL::new(schema)));
+    println!("Playground: http://localhost:8000");
+    Server::new(TcpListener::bind("0.0.0.0:8000"))
+        .run(app)
+        .await
+        .unwrap();
 }
