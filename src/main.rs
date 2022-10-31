@@ -4,7 +4,7 @@ use async_graphql::{
     EmptyMutation, EmptySubscription, Schema,
 };
 use async_graphql_poem::GraphQL;
-use citizensdivided::*;
+use congressional_fundraising_viz::*;
 use poem::{get, handler, listener::TcpListener, web::Html, IntoResponse, Route, Server};
 use sea_orm::Database;
 

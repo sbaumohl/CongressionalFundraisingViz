@@ -3,10 +3,10 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, BufRead};
 
-use citizensdivided::entities::{committees, independent_expenditures, prelude::*};
-use citizensdivided::fec_data::{get_sorted_path_bufs, parse_filing_date};
-use citizensdivided::EnvConfig;
-use citizensdivided::{entities::members, fec_data};
+use congressional_fundraising_viz::entities::{committees, independent_expenditures, prelude::*};
+use congressional_fundraising_viz::fec_data::{get_sorted_path_bufs, parse_filing_date};
+use congressional_fundraising_viz::EnvConfig;
+use congressional_fundraising_viz::{entities::members, fec_data};
 use sea_orm::{
     ActiveValue, ColumnTrait, Database, DatabaseConnection, EntityTrait, QueryFilter, QuerySelect,
 };

@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, BufRead};
 
-use citizensdivided::entities::{prelude::*, *};
-use citizensdivided::{fec_data, EnvConfig};
+use congressional_fundraising_viz::entities::{prelude::*, *};
+use congressional_fundraising_viz::{fec_data, EnvConfig};
 use sea_orm::{
     ActiveValue, ColumnTrait, Database, DatabaseConnection, EntityTrait, QueryFilter, QuerySelect,
 };

@@ -1,9 +1,9 @@
-use citizensdivided::entities::{members, prelude::*};
-use citizensdivided::EnvConfig;
+use congressional_fundraising_viz::entities::{members, prelude::*};
+use congressional_fundraising_viz::EnvConfig;
 use sea_orm::{ActiveValue, Database, DatabaseConnection, EntityTrait};
 
 mod propublica_request_handler {
-    use citizensdivided::entities::members;
+    use congressional_fundraising_viz::entities::members;
     use sea_orm::{ActiveModelTrait, ActiveValue};
     use serde::Deserialize;
     use serde_json::{json, Error, Value};

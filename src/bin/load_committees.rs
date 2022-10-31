@@ -1,9 +1,9 @@
 extern crate dotenv;
-use citizensdivided::entities::{committees, members, prelude::*};
-use citizensdivided::fec_data::{
+use congressional_fundraising_viz::entities::{committees, members, prelude::*};
+use congressional_fundraising_viz::fec_data::{
     get_sorted_path_bufs, new_file_reading_progress_spinner, none_if_empty, page_data,
 };
-use citizensdivided::EnvConfig;
+use congressional_fundraising_viz::EnvConfig;
 
 use sea_orm::{ActiveValue, ColumnTrait, Database, DatabaseConnection, EntityTrait, QueryFilter};
 use std::collections::HashMap;
