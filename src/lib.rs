@@ -11,7 +11,6 @@ pub use query_root::QueryRoot;
 pub struct OrmDataloader {
     pub db: DatabaseConnection,
 }
-
 pub struct EnvConfig {
     pub database_url: String,
     pub propublica_key: String,
@@ -36,7 +35,10 @@ impl EnvConfig {
                 .parse::<u8>()
                 .expect("CONGRESS_NO Env Variable u8 conversion error!"),
             complexity_limit: env::var("COMPLEXITY_LIMIT")
-                .map(|val| val.parse::<usize>().expect("COMPLEXITY_LIMIT is not a number"))
+                .map(|val| {
+                    val.parse::<usize>()
+                        .expect("COMPLEXITY_LIMIT is not a number")
+                })
                 .map_or(None, |val| Some(val)),
             depth_limit: env::var("DEPTH_LIMIT")
                 .map(|val| val.parse::<usize>().expect("DEPTH_LIMIT is not a number"))
@@ -84,7 +86,7 @@ pub mod fec_data {
         sorted_paths
     }
 
-    /// * Turns a String reference to an Option of a String, making it None if the passed string is empty, the value of the passed string otherwise.
+    /// * Turns a `String` reference to an `Option` of a String, making it `None` if the passed string is empty, the `Some(value)` of the passed string otherwise.
     pub fn none_if_empty(x: &str) -> Option<String> {
         if x.is_empty() {
             None
@@ -114,7 +116,9 @@ pub mod fec_data {
     }
 
     /// Parses an 18 or 11 length filing date into an election year.
-    ///
+    /// The Election Cycle is always determined by the occurence of a general election and is a two year period.
+    /// For example, because 2018 is the year of a general election, 2017-2018 is one election cycle, denoted by just "2018".
+    /// Cycle 2020 covers 2019-2020.
     /// # Panics
     ///
     /// Panics if a date format that is not 11 or 18 length.

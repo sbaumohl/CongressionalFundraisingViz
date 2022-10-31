@@ -1,6 +1,7 @@
 use sea_orm::entity::prelude::*;
 use serde::Deserialize;
 
+/// Every Member is a currently sitting senator or representative in the US Congress, each Member Object holds important biographical data about each lawmaker.
 #[derive(
     Clone,
     Debug,
@@ -66,7 +67,7 @@ pub struct Model {
     pub votes_against_party_pct: Option<Decimal>,
 }
 
-#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation, seaography::macros::RelationsCompact)]
+#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation,seaography::macros::RelationsCompact)]
 pub enum Relation {
     #[sea_orm(has_many = "super::committee_contributions::Entity")]
     CommitteeContributions,

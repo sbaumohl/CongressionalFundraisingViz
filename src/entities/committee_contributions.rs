@@ -1,5 +1,6 @@
 use sea_orm::entity::prelude::*;
 
+/// Committee Contribution represents the transfers from non-affiliated Political Action Committees to Candidate Committees.
 #[derive(
     Clone,
     Debug,
@@ -38,7 +39,7 @@ pub enum Relation {
         on_update = "NoAction",
         on_delete = "Cascade"
     )]
-    Committees2,
+    RecipientCommitteeDetails,
     #[sea_orm(
         belongs_to = "super::committees::Entity",
         from = "Column::SpenderCommittee",
@@ -46,7 +47,7 @@ pub enum Relation {
         on_update = "NoAction",
         on_delete = "Cascade"
     )]
-    Committees1,
+    SpenderCommitteeDetails,
 }
 
 impl Related<super::members::Entity> for Entity {

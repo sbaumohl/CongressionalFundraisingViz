@@ -7,8 +7,6 @@ version = '0.1.0'
 async-trait = { version = "0.1.53" }
 heck = { version = "0.4.0" }
 itertools = { version = "0.10.3" }
-
-# General API Crates
 juniper = "0.15.10"
 warp = "0.3.2"
 tokio = { version = "1.20.1", features = ["full"] }
@@ -38,7 +36,3 @@ serde_json = { version = '1.0.82' }
 
 [workspace]
 members = []
-
-[[bin]]
-name = "load_committees"
-# name = "load_members"

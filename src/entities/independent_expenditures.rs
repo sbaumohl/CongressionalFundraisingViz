@@ -1,5 +1,8 @@
 use sea_orm::entity::prelude::*;
 
+/// Independent Expenditures or Schedule E filings are advertising that political action committees pay for to advocate for certain issues or candidates. 
+/// They have to disclose which candidate they are advertising for, 
+///  whether it is a statement of support or opposition and how much is being spent.
 #[derive(
     Clone,
     Debug,

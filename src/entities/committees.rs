@@ -1,5 +1,6 @@
 use sea_orm::entity::prelude::*;
 
+/// Committees are the legal entities that fundraise and manage cash for candidates or outside groups for federal elections. Some are required to report their contributions, others are not. Each Committee **is** required to disclose how they spend/transfer their money.
 #[derive(
     Clone,
     Debug,

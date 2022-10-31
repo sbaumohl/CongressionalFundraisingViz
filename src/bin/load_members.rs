@@ -94,7 +94,6 @@ async fn main() {
     let client = reqwest::Client::new();
 
     // members is the core of our data, right now, if we're refreshing the data from propublica, we should dop EVERYTHING!
-    // TODO do a soft update, only changing what's different
     match members::Entity::delete_many().exec(&connection).await {
         Ok(del_res) => println!(
             "Success clearing table: {:?}. NOTE: THIS CASCADE DELETES THINGS AS WELL!",
