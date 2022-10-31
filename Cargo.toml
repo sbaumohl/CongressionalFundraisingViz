@@ -1,6 +1,6 @@
 [package]
 edition = '2021'
-name = 'citizensdivided'
+name = 'CongressionalFundraisingViz'
 version = '0.1.0'
 
 [dependencies]
