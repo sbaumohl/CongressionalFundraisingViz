@@ -24,12 +24,12 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
 # Sea ORM + Seaography (Graphql)
-sea-orm = { version = "^0.9", features = [ "sqlx-postgres", "runtime-tokio-native-tls", "macros" ] }
-sea-schema = "0.9.3"
+sea-orm = { version = "^0.10", features = [ "sqlx-postgres", "runtime-tokio-native-tls", "macros" ] }
+sea-schema = "^0.10"
 async-graphql = { version = "4.0.10", features = ["decimal", "chrono", "dataloader"] }
 async-graphql-rocket = "4.0.4"
 async-graphql-poem = "4.0.10"
-seaography = { version = "^0.1", features = [ "with-decimal", "with-chrono" ] }
+seaography = { version = "0.3", features = [ "with-decimal", "with-chrono" ] }
 
 [dev-dependencies]
 serde_json = { version = '1.0.82' }

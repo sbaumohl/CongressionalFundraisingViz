@@ -5,7 +5,10 @@ use async_graphql::{
 };
 use async_graphql_poem::GraphQL;
 use congressional_fundraising_viz::*;
-use poem::{get, handler, listener::TcpListener, web::Html, IntoResponse, Route, Server};
+use poem::{
+    get, handler, listener::TcpListener, middleware::Cors, web::Html, EndpointExt, IntoResponse,
+    Route, Server,
+};
 use sea_orm::Database;
 
 #[handler]
@@ -23,7 +26,7 @@ async fn main() {
         .with_max_level(tracing::Level::INFO)
         .with_test_writer()
         .init();
-    
+
     // init db connection
     let database = Database::connect(config.database_url).await.unwrap();
 
@@ -39,23 +42,28 @@ async fn main() {
     let schema = Schema::build(QueryRoot, EmptyMutation, EmptySubscription)
         .data(database)
         .data(orm_dataloader);
-    
-    // set graphql max complexity and depth
-    let schema = if let Some(depth) = config.depth_limit {
-        schema.limit_depth(depth)
-    } else {
-        schema
-    };
-    let schema = if let Some(complexity) = config.complexity_limit {
-        schema.limit_complexity(complexity)
-    } else {
-        schema
-    };
+
+    // set graphql max complexity and depth -> appears broken for now, will revisit later
+    // let schema = if let Some(depth) = config.depth_limit {
+    //     schema.limit_depth(depth)
+    // } else {
+    //     schema
+    // };
+    // let schema = if let Some(complexity) = config.complexity_limit {
+    //     schema.limit_complexity(complexity)
+    // } else {
+    //     schema
+    // };
 
     let schema = schema.finish();
 
-    let app = Route::new().at("/", get(graphql_playground).post(GraphQL::new(schema)));
-    
+    let app = Route::new().at(
+        "/",
+        get(graphql_playground)
+            .post(GraphQL::new(schema))
+            .with(Cors::new()),
+    );
+
     println!("Playground: http://localhost:8000");
     Server::new(TcpListener::bind("0.0.0.0:8000"))
         .run(app)
