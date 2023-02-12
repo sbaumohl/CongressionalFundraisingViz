@@ -31,8 +31,12 @@ async-graphql-rocket = "4.0.4"
 async-graphql-poem = "4.0.10"
 seaography = { version = "0.3", features = [ "with-decimal", "with-chrono" ] }
 
+congressional_fundraising_viz_macros = { path = "congressional_fundraising_viz_macros" }
+
 [dev-dependencies]
 serde_json = { version = '1.0.82' }
 
 [workspace]
 members = []
+
+# cargo rustc -- -Zunstable-options --pretty=expanded

@@ -5,16 +5,21 @@ use async_graphql::{
 };
 use async_graphql_poem::GraphQL;
 use congressional_fundraising_viz::*;
+use congressional_fundraising_viz_macros::AnswerFn;
 use poem::{
     get, handler, listener::TcpListener, middleware::Cors, web::Html, EndpointExt, IntoResponse,
     Route, Server,
 };
-use sea_orm::Database;
+use sea_orm::Database; 
 
 #[handler]
 async fn graphql_playground() -> impl IntoResponse {
     Html(playground_source(GraphQLPlaygroundConfig::new("/")))
 }
+
+
+#[derive(AnswerFn)]
+struct Shit;
 
 #[tokio::main]
 async fn main() {

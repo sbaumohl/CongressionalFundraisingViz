@@ -104,4 +104,22 @@ impl QueryRoot {
 
         Members::find().all(db).await
     }
+
+    async fn committee_contributions(
+        &self,
+        ctx: &Context<'_>,
+        filters: Option<committee_contributions::Filter>
+    ) -> Result<Vec<committee_contributions::Model>, DbErr> {
+        let db = ctx.data::<DatabaseConnection>().unwrap();
+
+        let mut results = CommitteeContributions::find();
+
+        results = if let Some(f) = filters {
+            results.filter(f.filter_condition())
+        } else {
+            results
+        };
+
+        results.all(db).await
+    }
 }
